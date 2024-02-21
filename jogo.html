@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <meta charset="utf-8"/>
+   <title>Iron Man</title>
+   <link rel="stylesheet" type ="text/css" href="css\fases.css" />
+   <link rel="shortcut icon" href="img/favicon.png">
+	 <script src="js/animacao.js"></script>
+	 <script src="js/teclado.js"></script>
+	 <script src="js/colisor.js"></script>
+	 <script src="js/fundo.js"></script>
+	 <script src="js/morte.js"></script>
+	 <script src="js/mob.js"></script>
+   <script src="js/tiro1.js"></script>
+   <script src="js/tiro2.js"></script>
+   <script src="js/tiro3.js"></script>
+	 <script src="js/spritesheet.js"></script>
+	 <script src="js/explosao.js"></script>
+	 <script src="js/painel.js"></script>
+   <script src="js/tirovni.js"></script>
+   <script src="js/chefao.js"></script>
+   <script src="js/tirochefao1.js"></script>
+   <script src="js/tirochefao2.js"></script>
+   <script src="js/powerup.js"></script>
+</head>
+
+<body onload="iniciarJogo()">
+  <div id="div_principal">
+      <!--Header com os Links-->
+      <header id="header_topo">
+        <div id="div_logo"><img id="logo" src="img/logo.png"></div>
+        <nav id="nav_menu">
+          <table id="links1">
+            <tr>
+              <!--Link da Home-->
+              <td><ul><li><a href="index.html">Home</a></li></ul></td>
+              <!--Link da Historia-->
+              <!--<td><ul><li><a href="historia.html">História</a></li></ul></td>-->
+              <!--Link das Fases-->
+              <td><ul><li><a href="jogo.html">Jogo</a></li></ul></td>
+            </tr>
+          </table>
+        </nav>
+      </header>
+      <!--Aside com a foto dos comandos-->
+      <aside id="aside_menuesquerdo">
+        <div id="div_comando"><p class="comando">Comandos</p></div>
+          <section id="section_comando">
+            <div id="div_teclado">
+              <img id="teclado" src="img/teclado.png">
+            </div>
+          </section>
+       </aside>
+       <!--Main com o Jogo dentro-->
+       <main id="main_conteudo">
+       <div id="main" role="main">
+         <!--Canvas com o jogo-->
+         <canvas id="canvas_animacao" width="10" height="10"></canvas>
+         <!--Script do jogo-->
+         <script type="text/javascript">
+            document.getElementById("canvas_animacao").width = screen.width - 15;
+            document.getElementById("canvas_animacao").height = screen.height - 121;
+            /*Canvas e Contexto*/
+            var canvas = document.getElementById('canvas_animacao');
+            var context = canvas.getContext('2d');
+            /*Variáveis principais*/
+            var imagens, animacao, teclado, colisor, nave, criadorInimigos, criadorTiros, criadorChefao, criadorTiroChefao;
+            var totalImagens = 0, carregadas = 0;
+            var musicaAcao;
+            /*Começa carregando as imagens, músicas e contexto do jogo*/
+            carregarImagens(); carregarMusicas(); carregando();
+
+            function carregarMusicas() {
+                musicaAcao = new Audio();
+                musicaAcao.src = 'snd/musica-fundo.mp3';
+                musicaAcao.load();
+                musicaAcao.volume = 0.8;
+                musicaAcao.loop = true;
+            }
+
+            function carregarImagens() {
+              imagens = {
+                espaco: 'fundo-espaco.png',
+                nuvens: 'fundo-nuvens.png',
+                estrelas: 'fundo-estrelas.png',
+                nave: 'nave-spritesheet.png',
+                ovni: 'ovni.png',
+                explosao: 'explosao.png',
+                explosao2: 'explosao2.png',
+                tiro1: 'tiro1.png',
+                tiro2: 'tiro2.png',
+                tiro3: 'tiro3.png',
+                chefao: 'chefao-spritesheet.png',
+                powerup: 'powerup.png'
+              };
+              /*Carregar todas imagens por esse laço de repetição*/
+              for (var i in imagens) {
+                 var img = new Image();
+                 img.src = 'img/' + imagens[i];
+                 img.onload = carregando;
+                 totalImagens++;
+                 /*Substituir o nome pela imagem*/
+                 imagens[i] = img;
+               }/*fecha o for*/
+             }/*fecha a função*/
+
+            function carregando() {
+               context.save();
+               /*Carrega o fundo do canvas Fundo*/
+               context.drawImage(imagens.espaco, 0, 0, canvas.width, canvas.height);
+               /*Carregamento das imagens*/
+               carregadas++;
+               var tamanhoTotal = 300;
+               var tamanho = carregadas / totalImagens * tamanhoTotal;
+               var tiro = imagens.tiro1;
+               context.restore();
+               /*Jogo Começa quanto tds as imagens e sons estiverem concluidas*/
+               if (carregadas == totalImagens) {iniciarObjetos();}
+            }
+
+            function iniciarObjetos() {
+               // Objetos principais
+               animacao = new Animacao(context);
+               teclado = new Teclado(document);
+               colisor = new Colisor();
+               espaco = new Fundo(context, imagens.espaco);
+               nuvens = new Fundo(context, imagens.nuvens);
+               estrelas = new Fundo(context, imagens.estrelas);
+               nave = new Nave(context, teclado, imagens.nave, imagens.explosao, imagens.explosao2, imagens.tiro1, imagens.tiro2, imagens.tiro3);
+               painel = new Painel(context, nave);
+               chefao = new Chefao(context, imagens.chefao, imagens.explosao2);
+               // Ligações entre objetos
+               animacao.novoSprite(espaco);
+               animacao.novoSprite(nuvens);
+               animacao.novoSprite(estrelas);
+               animacao.novoSprite(painel);
+               animacao.novoSprite(nave);
+               animacao.novoSprite(chefao);
+               colisor.novoSprite(chefao)
+               colisor.novoSprite(nave);
+               animacao.novoProcessamento(colisor);
+               configuracoesIniciais();
+            }
+
+            function configuracoesIniciais() {
+               // Fundos
+               espaco.velocidade = 60;
+               nuvens.velocidade = 100;
+               estrelas.velocidade = 80;
+               // Nave
+               nave.posicionar();
+               nave.velocidade = 450;
+               // Inimigos
+               criacaoInimigos();
+               // Game Over
+               nave.acabaramVidas = function() {
+                  animacao.desligar();
+                  gameOver();
+               }/*game over*/
+            }/*fecha funchão*/
+
+
+            function criacaoInimigos() {
+               criadorInimigos = {
+                  ultimoOvni: new Date().getTime(),
+
+                  processar: function() {
+                     var agora = new Date().getTime();
+                     var decorrido = agora - this.ultimoOvni;
+                     if (painel.pontuacao == 1500) {novoChefao();}
+                     else if (painel.pontuacao >= 1500){
+                         if (decorrido > 500 && painel.vidachefao > 0) {tiroChefao(); this.ultimoOvni = agora;}
+                     }
+                     else if (numeroOvnis <= 3){
+                       if (decorrido > 100) {
+                          if (painel.pontuacao < 1500) {
+                            novoOvni(); novoTiro();
+                            this.ultimoOvni = agora;
+                            numeroOvnis++;
+                            if (painel.powerup >= 20 && painel.pontiro < 42){
+                               novoPowerup();
+                               painel.powerup = 0;
+                             }/*novo power up*/
+                           }/*fecha pontuação*/
+                         }/*fecha decorido*/
+                       }/*fecha numero ovini*/
+                       else if (numeroOvnis = 4) {
+                         if (decorrido > 2000) {
+                           if (painel.pontuacao < 1500) {
+                             novoOvni(); novoTiro();
+                             this.ultimoOvni = agora;
+                             numeroOvnis = 0;
+                             if (painel.powerup >= 20  && painel.pontiro < 42) { novoPowerup(); painel.powerup = 0;
+                             }/*novo power up*/
+                           }/*fecha pontuação*/
+                         }/*fecha decorido*/
+                       }/*fecha numero ovini*/
+                     }/*fecha processar*/
+                   };/*fecha criar inimigos*/
+             animacao.novoProcessamento(criadorInimigos);
+           }/*fecha função*/
+
+            function novoOvni() {
+               var imgOvni = imagens.ovni;
+               var ovni = new Ovni(context, imgOvni, imagens.explosao);
+               ovni.velocidade = 100;
+               switch (ov){
+                  case 0: ovy = (screen.height / 20) * 2; ov = 1; break;
+                  case 1: ovy = (screen.height / 20) * 3; ov = 2; break;
+                  case 2: ovy = (screen.height / 20) * 4; ov = 3; break;
+                  case 3: ovy = (screen.height / 20) * 5; ov = 4; break;
+                  case 4: ovy = (screen.height / 20) * 6; ov = 5; break;
+                  case 5: ovy = (screen.height / 20) * 15; ov = 6; break;
+                  case 6: ovy = (screen.height / 20) * 14; ov = 7; break;
+                  case 7: ovy = (screen.height / 20) * 13; ov = 8; break;
+                  case 8: ovy = (screen.height / 20) * 12; ov = 9; break;
+                  case 9: ovy = (screen.height / 20) *  2; ov = 10; break;
+                  case 10: ovy = (screen.height / 20) * 4; ov = 11; break;
+                  case 11: ovy = (screen.height / 20) * 6; ov = 12; break;
+                  case 12: ovy = (screen.height / 20) * 8; ov = 13; break;
+                  case 13: ovy = (screen.height / 20) * 10; ov = 14; break;
+                  case 14: ovy = (screen.height / 20) * 15; ov = 15; break;
+                  case 15: ovy = (screen.height / 20) * 13; ov = 16; break;
+                  case 16: ovy = (screen.height / 20) * 11; ov = 17; break;
+                  case 17: ovy = (screen.height / 20) * 9; ov = 18; break;
+                  case 18: ovy = (screen.height / 20) * 7; ov = 19; break;
+                  case 19: ovy = (screen.height / 20) * 5; ov = 20; break;
+                  case 20: ovy = (screen.height / 20) * 8; ov = 0; break;
+               }/*fecha o switch*/
+               ovni.y = ovy;
+               ovni.x = screen.width;
+               animacao.novoSprite(ovni);
+               colisor.novoSprite(ovni);
+            }/*fecha função novo inimigo*/
+
+            function novoPowerup(){
+               var powerup = new Powerup(context, imagens.powerup, nave);
+               animacao.novoSprite(powerup);
+               colisor.novoSprite(powerup);
+            }/*fecha função novopoder*/
+
+            function novoTiro(){
+               var tirovni = new Tirovni(context, imagens.explosao);
+               animacao.novoSprite(tirovni);
+               colisor.novoSprite(tirovni);
+            }/*fecha função novoTiro*/
+
+            function tiroChefao(){
+               var tirochefao1 = new Tirochefao1(context, imagens.explosao);
+               animacao.novoSprite(tirochefao1);
+               colisor.novoSprite(tirochefao1);
+               var tirochefao2 = new Tirochefao2(context, imagens.explosao);
+               animacao.novoSprite(tirochefao2);
+               colisor.novoSprite(tirochefao2);
+            }/*fecha função tiroChefao*/
+
+            function novoChefao(){
+               chefao.y = this.context.canvas.height / 2 -250;
+               chefao.x = this.context.canvas.width;
+            }/*fecha função novoChefao*/
+
+            function ativarTiro(ativar) {
+               if (ativar) {teclado.disparou(ESPACO, function() {nave.atirar();} ); }
+               else teclado.disparou(ESPACO, null);
+            }/*fecha função*/
+
+
+            function iniciarJogo() {
+               criadorInimigos.ultimoOvni = new Date().getTime();
+               ativarTiro(true);
+               /*Zera a pontuação, inicia a música e liga a animação*/
+               powerup = 0; numeroOvnis = 0; ov = 0; ovy = 0;
+               painel.pontuacao = 0;
+               painel.pontiro = 0;
+               musicaAcao.play();
+               animacao.ligar();
+            }/*fecha ininciarJogo*/
+
+            function gameOver() {
+               /*Parar tiros*/
+               ativarTiro(false);
+               /*Parar a música e rebobinar*/
+               musicaAcao.pause(); musicaAcao.currentTime = 0.0;
+               /*Ação do fundo*/
+               context.drawImage(imagens.espaco, 0, 0, canvas.width, canvas.height);
+               /*Game Over*/
+               context.save();
+               context.fillStyle = 'White'; context.font = '90px arial';
+               context.fillText("Que pena!", canvas.width / 2 - 200, canvas.height / 2 - 50);
+               context.fillText("Sua Pontuação: " + painel.pontuacao, canvas.width / 2 - 300, canvas.height / 2 + 50);
+               context.restore().style.display = 'block';
+               /*Restaurar as condições do personagem*/
+               nave.vidasExtras = 3; nave.posicionar(); animacao.novoSprite(nave); colisor.novoSprite(nave);
+            }/*fecha função gameover*/
+
+            function removerInimigos() {
+               for (var i in animacao.sprites) {
+                 if (animacao.sprites[i] instanceof Ovni) animacao.excluirSprite(animacao.sprites[i]);
+               }/*fecha if*/
+            }/*fecha removerInimigos*/
+            </script>
+          </div>
+        </main>
+        <footer id="footer_rodape"></footer>
+      </div>
+    </body>
+  </html>
